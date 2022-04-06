@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="style/main.css" />
+    <script src="lib/f1.js"></script>
+    <script src="lib/f2.js"></script>
+    <script src="lib/f3.js"></script>
+    <script src="lib/f4.js"></script>
+  </head>
+
+  <body>
+    <div class="container">
+      <video id="video" class="input_video"></video>
+      <canvas
+        id="canvas"
+        class="output_canvas"
+        width="1080qpx"
+        height="720px"
+      ></canvas>
+      <canvas
+        style="opacity: 0"
+        class="output_canvas"
+        width="256qpx"
+        height="256px"
+      ></canvas>
+
+      <div class="text">
+        <p id="collected">0</p>
+        <p id="stopped">0</p>
+        <p id="signs"></p>
+      </div>
+
+      <script src="js/sign_detection.js" type="module"></script>
+    </div>
+  </body>
+</html>
