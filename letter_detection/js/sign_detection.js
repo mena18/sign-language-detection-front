@@ -10,17 +10,15 @@ const collected_text = document.getElementById("collected");
 const stopped_text = document.getElementById("stopped");
 const output_text = document.getElementById("signs");
 
-const NUMNER_OF_CORRECT_FRAMES = 15;
-const NUMBER_OF_WAITING_FRAMES = 20;
-const URL = "http://localhost:8001/test";
+const NUMNER_OF_CORRECT_FRAMES = 25;
+const URL = "http://localhost:8002/test";
 
 let can_detect = true;
 
-let correct_counter = 0;
-let false_counter = 0;
+let identical_counter = 0;
 
 let frame_list = [];
-let sign_list = [];
+let letter_list = [];
 
 let previous_landmarks = null;
 
@@ -39,31 +37,34 @@ async function postData(url = "", data = {}) {
 // http://127.0.0.1:5500/sign_detection/index.html
 function get_changes(current, prev) {
   if (prev === null || prev.length == 0 || current.length == 0) {
-    return false;
-  }
-  let counter = Math.min(prev.length, current.length);
-
-  let diffs = [0, 0];
-  for (let i = 0; i < counter; i++) {
-    for (let j = 0; j < 21; j++) {
-      const f_obj = current[i][j];
-      const s_obj = prev[i][j];
-      diffs[i] += Math.abs(f_obj.x - s_obj.x);
-      diffs[i] += Math.abs(f_obj.y - s_obj.y);
-    }
-  }
-  if (diffs[0] >= 0.4 || diffs[1] >= 0.4) {
     return true;
   }
-  return false;
+  let diff = 0;
+  for (let j = 0; j < 21; j++) {
+    const f_obj = current[0][j];
+    const s_obj = prev[0][j];
+    diff += Math.abs(f_obj.y - s_obj.y);
+  }
+
+  if (diff <= 0.2) {
+    return false;
+  }
+  return true;
 }
 
-function send() {
-  postData(URL, { data: frame_list }).then((data) => {
-    sign_list.push(data.text);
-    output_text.innerHTML = sign_list.join();
+function send(hand_label) {
+  postData(URL, {
+    data: [
+      frame_list[0],
+      frame_list[5],
+      frame_list[10],
+      frame_list[15],
+      frame_list[20],
+    ],
+  }).then((data) => {
+    letter_list.push(data.text);
+    output_text.innerHTML = letter_list.join();
   });
-
   frame_list = [];
 }
 
@@ -77,31 +78,21 @@ function onResults(results) {
   canvas2Ctx.drawImage(results.image, 0, 0, canvas2.width, canvas2.height);
 
   if (results.multiHandLandmarks) {
+    let hand_label = results?.multiHandedness[0]?.label;
     const cmp = get_changes(results.multiHandLandmarks, previous_landmarks);
     previous_landmarks = results.multiHandLandmarks;
     if (cmp) {
-      correct_counter++;
-      frame_list.push(canvas2.toDataURL());
-      false_counter = 0;
+      identical_counter = 0;
+      frame_list = [];
     } else {
-      false_counter++;
-      if (
-        false_counter == NUMBER_OF_WAITING_FRAMES &&
-        correct_counter >= NUMNER_OF_CORRECT_FRAMES
-      ) {
-        send();
-        false_counter = 0;
-        correct_counter = 0;
-      }
-      if (false_counter == NUMBER_OF_WAITING_FRAMES) {
-        false_counter = 0;
-        correct_counter = 0;
-        frame_list = [];
+      identical_counter++;
+      frame_list.push(canvas2.toDataURL());
+      if (identical_counter === NUMNER_OF_CORRECT_FRAMES) {
+        send(hand_label);
       }
     }
 
-    collected_text.innerHTML = `${correct_counter} collected`;
-    stopped_text.innerHTML = `${false_counter} Stopped`;
+    collected_text.innerHTML = `${identical_counter} collected`;
 
     for (const landmarks of results.multiHandLandmarks) {
       drawConnectors(canvas1Ctx, landmarks, HAND_CONNECTIONS, {
@@ -125,7 +116,7 @@ const hands = new Hands({
   },
 });
 hands.setOptions({
-  maxNumHands: 2,
+  maxNumHands: 1,
   modelComplexity: 1,
   minDetectionConfidence: 0.5,
   minTrackingConfidence: 0.5,
@@ -140,7 +131,7 @@ const camera = new Camera(videoElement, {
 
     // console.log(videoElement.);
   },
-  width: 1080,
+  width: 960,
   height: 720,
 });
 camera.start();
@@ -151,11 +142,10 @@ function logKey(e) {
     can_detect = true;
   } else if (e.code === "Escape") {
     can_detect = false;
-    correct_counter = 0;
-    false_counter = 0;
+    identical_counter = 0;
+
     frame_list = [];
-    collected_text.innerHTML = `${correct_counter} collected`;
-    stopped_text.innerHTML = `${false_counter} Stopped`;
+    collected_text.innerHTML = `${identical_counter} collected`;
 
     canvas1Ctx.fillStyle = "black";
     canvas1Ctx.fillRect(0, 0, canvas.width, canvas.height);
