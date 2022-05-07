@@ -11,8 +11,21 @@ const stopped_text = document.getElementById("stopped");
 const output_text = document.getElementById("signs");
 
 const NUMNER_OF_CORRECT_FRAMES = 15;
-const NUMBER_OF_WAITING_FRAMES = 20;
+const NUMBER_OF_WAITING_FRAMES = 30;
 const URL = "http://localhost:8001/test";
+
+const actions = {
+  one: "واحد",
+  you: "انت",
+  teacher: "معلم",
+  girl: "فتاة",
+  tomorrow: "غدا",
+  mom: "ام",
+  look: "انظر",
+  crazy: "مجنون",
+  walk: "يمشى",
+  agree: "موافق",
+};
 
 let can_detect = true;
 
@@ -52,7 +65,7 @@ function get_changes(current, prev) {
       diffs[i] += Math.abs(f_obj.y - s_obj.y);
     }
   }
-  if (diffs[0] >= 0.4 || diffs[1] >= 0.4) {
+  if (diffs[0] >= 0.3 || diffs[1] >= 0.3) {
     return true;
   }
   return false;
@@ -60,8 +73,10 @@ function get_changes(current, prev) {
 
 function send() {
   postData(URL, { data: frame_list }).then((data) => {
-    sign_list.push(data.text);
+    sign_list.push(actions[data.text]);
     output_text.innerHTML = sign_list.join();
+    let audio = new Audio(`voices/${data.text}.mp3`);
+    audio.play();
   });
 
   frame_list = [];

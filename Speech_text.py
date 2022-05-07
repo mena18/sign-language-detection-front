@@ -31,7 +31,7 @@ def from_mic():
     while not done:
         time.sleep(.5)
     
-    #print("Speak into your microphone.")
-    #result = speech_recognizer.recognize_once_async().get()
-    #Print(result.text)
+    # print("Speak into your microphone.")
+    # result = speech_recognizer.recognize_once_async().get()
+    # print(result.text)
 from_mic()

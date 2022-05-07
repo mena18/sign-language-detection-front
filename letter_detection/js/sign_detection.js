@@ -19,8 +19,19 @@ let identical_counter = 0;
 
 let frame_list = [];
 let letter_list = [];
+let word_list = [];
 
 let previous_landmarks = null;
+
+const reRender = () => {
+  output_text.innerHTML = word_list.join(" ") + " " + letter_list.join("");
+};
+
+async function get_voice(text) {
+  const request = `https://texttospeech.responsivevoice.org/v1/text:synthesize?text=${text}&lang=ar&engine=g1&name=&pitch=0.5&rate=0.5&volume=1&key=0POmS5Y2&gender=female`;
+  let audio = new Audio(request);
+  audio.play();
+}
 
 async function postData(url = "", data = {}) {
   // Default options are marked with *
@@ -61,9 +72,10 @@ function send(hand_label) {
       frame_list[15],
       frame_list[20],
     ],
+    hand_label: hand_label === "Left" ? "Right" : "Left",
   }).then((data) => {
     letter_list.push(data.text);
-    output_text.innerHTML = letter_list.join();
+    reRender();
   });
   frame_list = [];
 }
@@ -94,16 +106,43 @@ function onResults(results) {
 
     collected_text.innerHTML = `${identical_counter} collected`;
 
+    let min_x = 10;
+    let min_y = 10;
+    let max_x = 0;
+    let max_y = 0;
     for (const landmarks of results.multiHandLandmarks) {
-      drawConnectors(canvas1Ctx, landmarks, HAND_CONNECTIONS, {
-        color: "#00FF00",
-        lineWidth: 5,
-      });
-      drawLandmarks(canvas1Ctx, landmarks, {
-        color: "#FF0000",
-        lineWidth: 2,
-      });
+      for (const point of landmarks) {
+        min_x = Math.min(point.x, min_x);
+        min_y = Math.min(point.y, min_y);
+        max_x = Math.max(point.x, max_x);
+        max_y = Math.max(point.y, max_y);
+      }
+      // drawConnectors(canvas1Ctx, landmarks, HAND_CONNECTIONS, {
+      //   color: "#00FF00",
+      //   lineWidth: 5,
+      // });
+      // drawLandmarks(canvas1Ctx, landmarks, {
+      //   color: "#FF0000",
+      //   lineWidth: 2,
+      // });
     }
+
+    min_x *= 960;
+    max_x *= 960;
+    min_y *= 720;
+    max_y *= 720;
+    const shift = 40;
+
+    canvas1Ctx.beginPath();
+    canvas1Ctx.lineWidth = "5";
+    canvas1Ctx.strokeStyle = "green";
+    canvas1Ctx.rect(
+      min_x - shift,
+      min_y - shift,
+      max_x - min_x + shift,
+      max_y - min_y + shift
+    );
+    canvas1Ctx.stroke();
   }
   canvas1Ctx.restore();
 }
@@ -137,7 +176,6 @@ const camera = new Camera(videoElement, {
 camera.start();
 
 function logKey(e) {
-  console.log(e.code);
   if (e.code === "Enter") {
     can_detect = true;
   } else if (e.code === "Escape") {
@@ -154,7 +192,18 @@ function logKey(e) {
 
     // canvas1Ctx.clearRect(0, 0, canvas1.width, canvas1.height);
     // canvas2Ctx.clearRect(0, 0, canvas1.width, canvas1.height);
+  } else if (e.code === "Space") {
+    const new_word = letter_list.join("");
+    letter_list = [];
+    get_voice(new_word);
+    word_list.push(new_word);
+    reRender();
+  } else if (e.code === "Delete") {
+    letter_list.pop();
+    reRender();
   }
 }
 
 document.addEventListener("keydown", logKey);
+
+// https://responsivevoice.org/text-to-speech-languages/%D8%A7%D9%84%D9%86%D8%B5-%D8%A5%D9%84%D9%89-%D8%AE%D8%B7%D8%A7%D8%A8-%D8%A8%D8%A7%D9%84%D9%84%D8%BA%D8%A9-%D8%A7%D9%84%D8%B9%D8%B1%D8%A8%D9%8A%D8%A9/
